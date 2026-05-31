@@ -1,0 +1,6 @@
+{
+  "name": "Algebra Al-Usus",
+  "description": "An interactive scientific application for Algebra Al-Usus (الجبر الأصولي) and Semantic Text Textual Topology. Explore prime factorization spaces, conjugation orbits, trace mathematical metrics, and transform text into topological interpretations using Gemini.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
