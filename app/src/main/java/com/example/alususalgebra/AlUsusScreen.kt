@@ -52,8 +52,8 @@ fun AlUsusScreen(
     val historyItems by viewModel.historyItems.collectAsState()
 
     val timeString = remember {
-        val sdf = SimpleDateFormat("yyyy-05-31 HH:mm '(UTC)'", Locale.US)
-        sdf.format(Date())
+        val sdf = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
+        sdf.format(Date()) + " (UTC)"
     }
 
     // Force elegant native RTL layout globally for perfect Arabic typography
@@ -389,7 +389,7 @@ fun PlaygroundTab(viewModel: AlUsusViewModel) {
                         )
                         MetricCard(
                             title = "الوهج (Wahaj)",
-                            value = AlUsusCore.computeWahaj(factorization!!.n).toString(),
+                            value = AlUsusBigCore.computeWahajBig(factorization!!.n).toString(),
                             description = "المسافة من الواحد L¹",
                             modifier = Modifier.weight(1f)
                         )
@@ -398,13 +398,13 @@ fun PlaygroundTab(viewModel: AlUsusViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         MetricCard(
                             title = "القدرة (Qudra)",
-                            value = AlUsusCore.computeQudra(factorization!!.n).toString(),
+                            value = AlUsusBigCore.computeQudraBig(factorization!!.n).toString(),
                             description = "حاصل ضرب الأسوس (التعقيد)",
                             modifier = Modifier.weight(1f)
                         )
                         MetricCard(
                             title = "المعول (Mi'wal)",
-                            value = String.format(Locale.US, "%.3f", AlUsusCore.computeMiwal(factorization!!.n)),
+                            value = String.format(Locale.US, "%.3f", AlUsusBigCore.computeMiwalBig(factorization!!.n)),
                             description = "شدة الإشعاع العكسي",
                             modifier = Modifier.weight(1f)
                         )
@@ -413,13 +413,13 @@ fun PlaygroundTab(viewModel: AlUsusViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         MetricCard(
                             title = "العمد (A'mad)",
-                            value = AlUsusCore.computeAmad(factorization!!.n).toString(),
+                            value = AlUsusBigCore.computeAmadBig(factorization!!.n).toString(),
                             description = "ترتيب أكبر محور أولي",
                             modifier = Modifier.weight(1f)
                         )
                         MetricCard(
                             title = "الجذر (Kernel)",
-                            value = AlUsusCore.computeGidr(factorization!!.n).toString(),
+                            value = AlUsusBigCore.computeGidrBig(factorization!!.n).toString(),
                             description = "مجموع الأنوية المتفردة",
                             modifier = Modifier.weight(1f)
                         )
@@ -448,7 +448,7 @@ fun PlaygroundTab(viewModel: AlUsusViewModel) {
                         )
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        val sabaha = AlUsusCore.computeSabaha(factorization!!.n)
+                        val sabaha = AlUsusBigCore.computeSabahaBig(factorization!!.n)
                         if (sabaha.isEmpty()) {
                             Text("العدد أولي أو يساوي ١، طول السبحة = صفر", color = CosmicMutedText, fontSize = 12.sp)
                         } else {
@@ -469,7 +469,7 @@ fun PlaygroundTab(viewModel: AlUsusViewModel) {
                                     ) {
                                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                             Text(
-                                                text = "p_${AlUsusCore.getPrimalIndexStr(pair.first)} = ${pair.first}",
+                                                text = "p_${AlUsusBigCore.getPrimeIndexBig(pair.first)} = ${pair.first}",
                                                 color = CosmicWhite,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.Bold
@@ -624,7 +624,7 @@ fun PlaygroundTab(viewModel: AlUsusViewModel) {
                                     fontFamily = FontFamily.Monospace
                                 )
                                 Text(
-                                    text = if (masafaDistance == 2 && AlUsusCore.isPrime(mInput.toLongOrNull() ?: 1) && AlUsusCore.isPrime(nInput.toLongOrNull() ?: 1)) {
+                                    text = if (masafaDistance == 2 && mInput.toBigIntegerOrNull() != null && nInput.toBigIntegerOrNull() != null && mInput.toBigInteger().isProbablePrime(20) && nInput.toBigInteger().isProbablePrime(20)) {
                                         "ملاحظة هندسية: كلاهما أوليان، وتباعدهما ثابت ومقداره دائماً = ٢"
                                     } else {
                                         "مقياس التباعد البنيوي بالفضاء لا نهائي الأبعاد"
@@ -669,10 +669,25 @@ fun MetricCard(
 }
 
 @Composable
-fun PrimalCoordinatesGraph(vector: AlUsusVector) {
+fun PrimalCoordinatesGraph(vector: AlUsusVectorBig) {
     val factors = vector.factors
-    val maxIndex = if (factors.isEmpty()) 4 else factors.maxOf { it.primeIndex }.coerceAtLeast(4)
+    val maxIndex = if (factors.isEmpty()) 4 else (factors.maxOfOrNull { it.primeIndex } ?: 4).coerceAtLeast(4)
     val map = factors.associate { it.primeIndex to it.exponent }
+    
+    // Safety for rendering huge numbers:
+    if (maxIndex > 200) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(110.dp)
+                .background(CosmicSlateLight, shape = RoundedCornerShape(8.dp))
+                .padding(16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text = "تمثيل الفضاء المعرفي ضخم جداً للرسم البياني", color = CosmicAmber, fontSize = 12.sp)
+        }
+        return
+    }
 
     Canvas(
         modifier = Modifier

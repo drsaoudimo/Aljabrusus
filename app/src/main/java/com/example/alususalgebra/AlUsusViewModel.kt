@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.json.JSONObject
+import java.math.BigInteger
 
 enum class AlUsusTab {
     PLAYGROUND,
@@ -62,11 +63,11 @@ class AlUsusViewModel(application: Application) : AndroidViewModel(application) 
     // Factorizer states
     val activeInput = MutableStateFlow("60")
     
-    private val _factorization = MutableStateFlow<AlUsusVector?>(null)
-    val factorization: StateFlow<AlUsusVector?> = _factorization.asStateFlow()
+    private val _factorization = MutableStateFlow<AlUsusVectorBig?>(null)
+    val factorization: StateFlow<AlUsusVectorBig?> = _factorization.asStateFlow()
 
-    private val _kasrTree = MutableStateFlow<KasrNode?>(null)
-    val kasrTree: StateFlow<KasrNode?> = _kasrTree.asStateFlow()
+    private val _kasrTree = MutableStateFlow<KasrNodeBig?>(null)
+    val kasrTree: StateFlow<KasrNodeBig?> = _kasrTree.asStateFlow()
 
     private val _topology = MutableStateFlow<NumberTopology?>(null)
     val topology: StateFlow<NumberTopology?> = _topology.asStateFlow()
@@ -553,28 +554,33 @@ class AlUsusViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun calculateAllForActive() {
-        val num = activeInput.value.toLongOrNull() ?: return
-        if (num <= 0) return
+        val numStr = activeInput.value.trim()
+        if (numStr.isEmpty()) return
+        val num = try { BigInteger(numStr) } catch(e: Exception) { return }
+        if (num <= BigInteger.ZERO) return
         
         viewModelScope.launch {
-            val vec = AlUsusCore.factorize(num)
+            val vec = AlUsusBigCore.factorizeBig(num)
             _factorization.value = vec
-            _kasrTree.value = AlUsusCore.computeKasr(num)
-            _topology.value = AlUsusCore.getNumberTopologyInfo(num)
+            _kasrTree.value = AlUsusBigCore.computeKasrBig(num)
+            _topology.value = AlUsusBigCore.getNumberTopologyInfoBig(num)
             
-            val conj = AlUsusCore.computeConjugation(num)
-            _conjugationResult.value = conj?.toString() ?: "💥 انفجار طاقي إلى اللانهاية (>9.2 × 10¹⁸)"
+            val conj = AlUsusBigCore.computeConjugationBig(num)
+            _conjugationResult.value = conj
             
-            val modConj = AlUsusCore.computeModifiedConjugation(num)
-            _modifiedConjugationResult.value = modConj.toString()
+            val modConj = AlUsusBigCore.computeModifiedConjugationBig(num)
+            _modifiedConjugationResult.value = modConj
         }
     }
 
     private fun calculateMasafa() {
-        val m = mInput.value.toLongOrNull() ?: return
-        val n = nInput.value.toLongOrNull() ?: return
-        if (m > 0 && n > 0) {
-            _masafaDistance.value = AlUsusCore.computeMasafa(m, n)
+        val mStr = mInput.value.trim()
+        val nStr = nInput.value.trim()
+        val m = try { BigInteger(mStr) } catch(e: Exception) { return }
+        val n = try { BigInteger(nStr) } catch(e: Exception) { return }
+        
+        if (m > BigInteger.ZERO && n > BigInteger.ZERO) {
+            _masafaDistance.value = AlUsusBigCore.computeMasafaBig(m, n)
         }
     }
 
@@ -651,14 +657,15 @@ class AlUsusViewModel(application: Application) : AndroidViewModel(application) 
 
     // Save numerical factorization to history DB
     fun saveActiveToHistory() {
-        val num = activeInput.value.toLongOrNull() ?: return
+        val numStr = activeInput.value.trim()
+        val num = try { BigInteger(numStr) } catch(e: Exception) { return }
         val vec = _factorization.value ?: return
         viewModelScope.launch {
             val json = JSONObject().apply {
                 put("vectorString", vec.vectorString)
-                put("wahaj", AlUsusCore.computeWahaj(num))
-                put("qudra", AlUsusCore.computeQudra(num))
-                put("amad", AlUsusCore.computeAmad(num))
+                put("wahaj", AlUsusBigCore.computeWahajBig(num))
+                put("qudra", AlUsusBigCore.computeQudraBig(num))
+                put("amad", AlUsusBigCore.computeAmadBig(num))
             }
             repository.insert(
                 AlUsusRecordEntity(
